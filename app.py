@@ -1,52 +1,91 @@
 from flask import Flask, request, abort
+import os
 
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import (
+    MessageEvent,
+    TextMessage,
+    TextSendMessage,
+    TemplateSendMessage,
+    ButtonsTemplate,
+    PostbackAction,
+)
 
 app = Flask(__name__)
 
-# ★ここにLINEの情報を入れる（あとで貼る）
-CHANNEL_ACCESS_TOKEN = "xt6cwUms1Vd4oC0dCCDin9T9ZbvCXbE/Y34weON6Tioa1N2yajB0qQpDHUqWp3vV5WCSDIYrb1f+QG9Pfdg9YhOgOllbg7iXGZP6Fum8iFxXUeoNH+9noq0S/hfAjJ0Zp7ZfB78eTth/DG9E9Nx6ywdB04t89/1O/w1cDnyilFU="
-CHANNEL_SECRET = "0fc6deeed51eb52f8c27df2f3065b9e2"
+# =========================
+# 環境変数（Renderに設定）
+# =========================
+CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN")
+CHANNEL_SECRET = os.environ.get("CHANNEL_SECRET")
 
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 
-@app.route("/")
-def home():
-    return "ふたりの天気 🌤️"
-
-
-@app.route("/callback", methods=['POST'])
+# =========================
+# Webhookエンドポイント
+# =========================
+@app.route("/callback", methods=["POST"])
 def callback():
-    signature = request.headers['X-Line-Signature']
+    signature = request.headers["X-Line-Signature"]
 
     body = request.get_data(as_text=True)
+    app.logger.info("Request body: " + body)
 
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
 
-    return 'OK'
+    return "OK"
 
 
+# =========================
+# メッセージ受信
+# =========================
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+
     text = event.message.text
 
-    reply = "ふたりの天気だよ🌤️"
+    # シンプル応答
+    if text == "天気":
+        message = TextSendMessage(text="今日はどう？☀️")
+        line_bot_api.reply_message(event.reply_token, message)
 
-    if text == "こんにちは":
-        reply = "こんにちは！🌤️"
+    elif text == "気分":
+        buttons = TemplateSendMessage(
+            alt_text="今日の気分を教えて",
+            template=ButtonsTemplate(
+                title="今日の気分",
+                text="今の気分はどれ？",
+                actions=[
+                    PostbackAction(label="良い😊", data="good"),
+                    PostbackAction(label="普通🙂", data="normal"),
+                    PostbackAction(label="悪い😢", data="bad"),
+                ],
+            ),
+        )
+        line_bot_api.reply_message(event.reply_token, buttons)
 
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=reply)
-    )
+    else:
+        message = TextSendMessage(text="「天気」か「気分」と送ってみてね！")
+        line_bot_api.reply_message(event.reply_token, message)
 
 
+# =========================
+# ポストバック処理（ボタン）
+# =========================
+@handler.add(MessageEvent)
+def handle_postback(event):
+    pass
+
+
+# =========================
+# 起動（Render対応）
+# =========================
 if __name__ == "__main__":
-    app.run(port=5001, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
