@@ -75,7 +75,7 @@ def handle_postback(event):
     if data == "sunny":
         # テキストとボタンをセットにして送ります
         messages = [
-            TextSendMessage(text="☀️ だね！素敵な一日になりますように。"),
+            TextSendMessage(text="☀️ だね！素敵な一日になりますように！"),
             TemplateSendMessage(
                 alt_text="どんな気分？",
                 template=ButtonsTemplate(
@@ -113,7 +113,7 @@ def handle_postback(event):
 
     elif data == "rainy":
         messages = [
-            TextSendMessage(text="🌧️ 雨なんだね。今日は自分を労わってあげてね。"),
+            TextSendMessage(text="🌧️ 雨なんだね。自分のペースでいこー！。"),
             TemplateSendMessage(
                 alt_text="どんな気分？",
                 template=ButtonsTemplate(
@@ -140,7 +140,7 @@ def handle_postback(event):
     elif data.startswith("ans_"):
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="教えてくれてありがとう！この後、相手に伝える仕組みを作るよ！")
+            TextSendMessage(text="教えてくれてありがとう☘️")
         )
 
 if __name__ == "__main__":
