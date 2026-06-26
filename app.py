@@ -24,25 +24,28 @@ line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 MOOD_DICTIONARY = {
-    "ans_sunny_1": "☀️ 晴れ\n💬 話を聞いてほしい",
+    "ans_sunny_1": "☀️ 晴れ\n💬 話を聴いてほしい",
     "ans_sunny_2": "☀️ 晴れ\n🎉 一緒に喜んでほしい",
     "ans_sunny_3": "☀️ 晴れ\n🤗 甘えたい",
     "ans_sunny_4": "☀️ 晴れ\n😌 特に何もなくて大丈夫",
-    "ans_cloudy_1": "⛅️ くもり\n👂 話を聞いてほしい",
+    "ans_cloudy_1": "⛅️ くもり\n👂 話を聴いてほしい",
     "ans_cloudy_2": "⛅️ くもり\n💌 メッセージがほしい",
     "ans_cloudy_3": "⛅️ くもり\n🤝 少し励ましてほしい",
     "ans_cloudy_4": "⛅️ くもり\n😌 そっとしておいてほしい",
     "ans_rainy_1": "🌧️ 雨\n🫂 慰めてほしい",
-    "ans_rainy_2": "🌧️ 雨\n👂 話を聞いてほしい",
+    "ans_rainy_2": "🌧️ 雨\n👂 話を聴いてほしい",
     "ans_rainy_3": "🌧️ 雨\n❤️ 優しくしてほしい",
     "ans_rainy_4": "🌧️ 雨\n😌 今日はそっとしておいてほしい",
+    "ans_unknown_1": "❓ まだわからない\n💬 とりあえず話を聴いてほしい",
+    "ans_unknown_2": "❓ まだわからない\n☕️ 気分転換に付き合ってほしい",
+    "ans_unknown_3": "❓ まだわからない\n🫂 ただそばにいてほしい",
+    "ans_unknown_4": "❓ まだわからない\n😌 今は何も考えたくない",
 }
 
 @app.route("/")
 def home():
     return "Futari no Tenki is running!"
 
-# 👇 毎朝9時にタイマーサイトからアクセスしてもらうための専用窓口
 @app.route("/morning-trigger", methods=["GET"])
 def morning_trigger():
     if not MY_USER_ID or not PARTNER_USER_ID:
@@ -63,7 +66,6 @@ def morning_trigger():
     )
 
     try:
-        # あなたとほのかちゃんの1対1トーク画面に、それぞれ同時にボタンを送信（プッシュ送信）
         line_bot_api.push_message(MY_USER_ID, buttons)
         line_bot_api.push_message(PARTNER_USER_ID, buttons)
         return "Successfully sent morning message to both users!"
@@ -128,7 +130,7 @@ def handle_postback(event):
                     title="☀️ 晴れ",
                     text="どんな気分？",
                     actions=[
-                        PostbackAction(label="💬 話を聞いてほしい", data="ans_sunny_1"),
+                        PostbackAction(label="💬 話を聴いてほしい", data="ans_sunny_1"),
                         PostbackAction(label="🎉 一緒に喜んでほしい", data="ans_sunny_2"),
                         PostbackAction(label="🤗 甘えたい", data="ans_sunny_3"),
                         PostbackAction(label="😌 特に何もなくて大丈夫", data="ans_sunny_4"),
@@ -147,7 +149,7 @@ def handle_postback(event):
                     title="⛅️ くもり",
                     text="どんな気分？",
                     actions=[
-                        PostbackAction(label="👂 話を聞いてほしい", data="ans_cloudy_1"),
+                        PostbackAction(label="👂 話を聴いてほしい", data="ans_cloudy_1"),
                         PostbackAction(label="💌 メッセージがほしい", data="ans_cloudy_2"),
                         PostbackAction(label="🤝 少し励ましてほしい", data="ans_cloudy_3"),
                         PostbackAction(label="😌 そっとしておいてほしい", data="ans_cloudy_4"),
@@ -167,7 +169,7 @@ def handle_postback(event):
                     text="どんな気分？",
                     actions=[
                         PostbackAction(label="🫂 慰めてほしい", data="ans_rainy_1"),
-                        PostbackAction(label="👂 話を聞いてほしい", data="ans_rainy_2"),
+                        PostbackAction(label="👂 話を聴いてほしい", data="ans_rainy_2"),
                         PostbackAction(label="❤️ 優しくしてほしい", data="ans_rainy_3"),
                         PostbackAction(label="😌 今日はそっとしておいてほしい", data="ans_rainy_4"),
                     ],
@@ -177,10 +179,23 @@ def handle_postback(event):
         line_bot_api.reply_message(event.reply_token, messages)
 
     elif data == "unknown":
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="❓ まだわからない日もあるよね。ゆっくりいこう。")
-        )
+        messages = [
+            TextSendMessage(text="❓ まだわからない日もあるよね。ゆっくりいこう。"),
+            TemplateSendMessage(
+                alt_text="どんな気分？",
+                template=ButtonsTemplate(
+                    title="❓ まだわからない",
+                    text="どんな気分？",
+                    actions=[
+                        PostbackAction(label="💬 とりあえず話を聴いてほしい", data="ans_unknown_1"),
+                        PostbackAction(label="☕️ 気分転換に付き合ってほしい", data="ans_unknown_2"),
+                        PostbackAction(label="🫂 ただそばにいてほしい", data="ans_unknown_3"),
+                        PostbackAction(label="😌 今は何も考えたくない", data="ans_unknown_4"),
+                    ],
+                ),
+            )
+        ]
+        line_bot_api.reply_message(event.reply_token, messages)
 
     # ====== 2段階目（プッシュ通知で相手に送信） ======
     elif data.startswith("ans_"):
