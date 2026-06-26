@@ -87,7 +87,7 @@ def handle_message(event):
     text = event.message.text
     user_id = event.source.user_id
 
-    if text == "気分":
+    if text == "天気":
         buttons = TemplateSendMessage(
             alt_text="今日の心の天気",
             template=ButtonsTemplate(
@@ -112,7 +112,7 @@ def handle_message(event):
     else:
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="『気分』と送ると心の天気を記録できるよ☀️")
+            TextSendMessage(text="『天気』と送ると心の天気を記録できるよ☀️")
         )
 
 @handler.add(PostbackEvent)
@@ -142,7 +142,7 @@ def handle_postback(event):
 
     elif data == "cloudy":
         messages = [
-            TextSendMessage(text="⛅️ くもりなんだね。無理せず過ごそう。"),
+            TextSendMessage(text="⛅️ なんだね。無理せず過ごそう。"),
             TemplateSendMessage(
                 alt_text="どんな気分？",
                 template=ButtonsTemplate(
@@ -161,7 +161,7 @@ def handle_postback(event):
 
     elif data == "rainy":
         messages = [
-            TextSendMessage(text="🌧️ 雨なんだね。今日は自分を労わってあげてね。"),
+            TextSendMessage(text="🌧️ なんだね。今日は自分を労わってあげてね。"),
             TemplateSendMessage(
                 alt_text="どんな気分？",
                 template=ButtonsTemplate(
@@ -217,8 +217,8 @@ def handle_postback(event):
             except:
                 sender_name = "パートナー"
 
-            mood_text = MOOD_DICTIONARY.get(data, "今の気分")
-            push_text = f"{sender_name}さんから今日の気分が届いたよ！\n\n{mood_text}"
+            mood_text = MOOD_DICTIONARY.get(data, "今の天気")
+            push_text = f"{sender_name}さんから今日の天気が届いたよ！\n\n{mood_text}"
             
             try:
                 line_bot_api.push_message(target_id, TextSendMessage(text=push_text))
