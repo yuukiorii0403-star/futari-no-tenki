@@ -17,14 +17,12 @@ app = Flask(__name__)
 CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN")
 CHANNEL_SECRET = os.environ.get("CHANNEL_SECRET")
 
-# 👇 お互いのIDをRenderの設定から読み込む準備
 MY_USER_ID = os.environ.get("MY_USER_ID")
 PARTNER_USER_ID = os.environ.get("PARTNER_USER_ID")
 
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
-# 相手に送るための「気分」の翻訳辞書
 MOOD_DICTIONARY = {
     "ans_sunny_1": "☀️ 晴れ\n💬 話を聞いてほしい",
     "ans_sunny_2": "☀️ 晴れ\n🎉 一緒に喜んでほしい",
@@ -43,6 +41,34 @@ MOOD_DICTIONARY = {
 @app.route("/")
 def home():
     return "Futari no Tenki is running!"
+
+# 👇 毎朝9時にタイマーサイトからアクセスしてもらうための専用窓口
+@app.route("/morning-trigger", methods=["GET"])
+def morning_trigger():
+    if not MY_USER_ID or not PARTNER_USER_ID:
+        return "User IDs are not set in environment variables.", 400
+
+    buttons = TemplateSendMessage(
+        alt_text="今日の心の天気",
+        template=ButtonsTemplate(
+            title="ふたりの天気 ☀️",
+            text="おはよう！☀️ 今日の心の天気はどう？",
+            actions=[
+                PostbackAction(label="☀️ 晴れ", data="sunny"),
+                PostbackAction(label="⛅️ くもり", data="cloudy"),
+                PostbackAction(label="🌧️ 雨", data="rainy"),
+                PostbackAction(label="❓ まだわからない", data="unknown"),
+            ],
+        ),
+    )
+
+    try:
+        # あなたとほのかちゃんの1対1トーク画面に、それぞれ同時にボタンを送信（プッシュ送信）
+        line_bot_api.push_message(MY_USER_ID, buttons)
+        line_bot_api.push_message(PARTNER_USER_ID, buttons)
+        return "Successfully sent morning message to both users!"
+    except Exception as e:
+        return f"Error: {str(e)}", 500
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -90,7 +116,7 @@ def handle_message(event):
 @handler.add(PostbackEvent)
 def handle_postback(event):
     data = event.postback.data
-    user_id = event.source.user_id # ボタンを押した人のID
+    user_id = event.source.user_id
 
     # ====== 1段階目（天気を選んだとき） ======
     if data == "sunny":
@@ -158,33 +184,27 @@ def handle_postback(event):
 
     # ====== 2段階目（プッシュ通知で相手に送信） ======
     elif data.startswith("ans_"):
-        # 1. まずは自分に完了メッセージを返す
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="記録したよ！相手にもそっと伝えておくね🕊️")
         )
 
-        # 2. 送信相手を特定する
         target_id = None
         if user_id == MY_USER_ID:
             target_id = PARTNER_USER_ID
         elif user_id == PARTNER_USER_ID:
             target_id = MY_USER_ID
 
-        # 3. 相手のIDが分かっている場合のみ、プッシュ通知を送る
         if target_id:
             try:
-                # LINEのプロフィール名（名前）を取得
                 profile = line_bot_api.get_profile(user_id)
                 sender_name = profile.display_name
             except:
                 sender_name = "パートナー"
 
-            # 相手に送る文章を作成
             mood_text = MOOD_DICTIONARY.get(data, "今の気分")
             push_text = f"{sender_name}さんから今日の気分が届いたよ！\n\n{mood_text}"
             
-            # 相手のトーク画面へプッシュ送信！
             try:
                 line_bot_api.push_message(target_id, TextSendMessage(text=push_text))
             except Exception as e:
